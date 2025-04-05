@@ -1,0 +1,63 @@
+training:
+  n_iters: 500000 #? 不是哥们你这得跑这么长时间的吗
+  num_exp: 1
+  # eval_every: 200
+  eval_every: 20
+  print_every: 10
+  train_framework: ''
+  lr_scheduler: 0
+
+# evaluation:
+#   num_eval: 10
+#   train_epoch: 300
+evaluation:
+  num_eval: 3
+  train_epoch: 300
+
+dataset:
+  name: ''
+  data_path: 'data'
+
+compressor:
+  name: 'imgs_embedding'
+  ipc: 50 #会被args覆盖
+  downsample_scale: 1 #会被args覆盖
+
+intervention:
+  name: 'pair_match'
+  strategy: ''
+  train_intervention: ''
+  test_interveition: ''
+
+backbone:
+  name: 'ConvNet'
+  train_epoch: 300
+
+bptt:
+  inner_steps: 20
+  generalization_batches: 10
+#? 真sb啊 merge_args里面 将backbone_optim和bptt_optim 都设置成了args.inner_optimizer
+compressor_optim:
+  optimizer: "SGD"
+  lr: 0.1
+  beta1: 0.9
+  weight_decay: 0
+  momentum: 0.5
+
+backbone_optim:
+  optimizer: "SGD"
+  lr: 0.01
+  momentum: 0.9
+  weight_decay: 0
+  temperature: 0.1
+
+bptt_optim:
+  optimizer: "SGD"
+  lr: 0.01
+  momentum: 0.9
+  weight_decay: 0
+  temperature: 0
+
+save:
+  tstMy: 1
+  save_every: 50
