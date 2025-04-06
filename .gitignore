@@ -1,8 +1,10 @@
 /logs/
 # Python bytecode files
-# __pycache__/
-# *.pyc
-# *.pyo
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
 # Virtual environments
 # venv/
