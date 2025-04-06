@@ -37,40 +37,72 @@ class Net(nn.Module):
 
         # self.basis = nn.Embedding(self.n_basis, channel*np.prod(self.im_size))#n_basis个basis
         # self.imgs  = nn.Embedding(ipc*num_classes, self.n_basis)
-        self.imgs  = nn.Embedding(ipc*num_classes, self.feature_map_size*self.feature_map_size)#* 每个标签映射到一个特征图
-        # 
-        # self.decoder = nn.Sequential(
-        #     nn.ConvTranspose2d(1, 64, kernel_size=3, stride=2, padding=1, output_padding=1),  # 4 → 8
-        #     nn.ReLU(),
-        #     nn.ConvTranspose2d(64, 128, kernel_size=3, stride=2, padding=1, output_padding=1), # 8 → 16
-        #     nn.ReLU(),
-        #     nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1), # 16 → 32
-        #     nn.ReLU(),
-        #     nn.ConvTranspose2d(64, self.channel, kernel_size=3, stride=2, padding=1, output_padding=1), # 32 → 64
-        #     nn.Tanh()  # 输出范围 [0,1]，适用于图像 #! maybe use tanh?
-        #     #* 由于数据集有normalize 有负值的实际上
-        # )
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(1, 64, kernel_size=3, stride=2, padding=1, output_padding=1), # 16 → 32
-            nn.ReLU(),
-            nn.ConvTranspose2d(64, self.channel, kernel_size=3, stride=2, padding=1, output_padding=1), # 32 → 64
-            nn.Tanh()  # 输出范围 [0,1]，适用于图像 #! maybe use tanh?
-            #* 由于数据集有normalize 有负值的实际上
-        )
-        
-        self.labs  = torch.tensor(
-                         np.array([np.ones(self.ipc)*i for i in range(self.num_classes)]),
-                         requires_grad=False,
-                         device=self.device
-                     ).long().view(-1)#蒸馏一开始输入的y 无需独热编码 因为前面是embedding? 
-        #以及可以看到这个标签实际上是要获取所有类别的蒸馏数据 大小也为ipc*num_classes
+        self.MODE=1 #!中杯 大杯 超大杯
+        if self.MODE==0:
+            self.imgs  = nn.Embedding(ipc*num_classes, self.feature_map_size*self.feature_map_size)#* 每个标签映射到一个特征图
+            self.decoder = nn.Sequential(
+                nn.ConvTranspose2d(1, 64, kernel_size=3, stride=2, padding=1, output_padding=1), # 16 → 32
+                nn.ReLU(),
+                nn.ConvTranspose2d(64, self.channel, kernel_size=3, stride=2, padding=1, output_padding=1), # 32 → 64
+                nn.Tanh()  # 输出范围 [0,1]，适用于图像 #! maybe use tanh?
+                #* 由于数据集有normalize 有负值的实际上
+            )
+            
+            self.labs  = torch.tensor(
+                            np.array([np.ones(self.ipc)*i for i in range(self.num_classes)]),
+                            requires_grad=False,
+                            device=self.device
+                        ).long().view(-1)#蒸馏一开始输入的y 无需独热编码 因为前面是embedding? 
+            #以及可以看到这个标签实际上是要获取所有类别的蒸馏数据 大小也为ipc*num_classes
+        elif self.MODE==1:
+            latent_dim=256
+            self.imgs  = nn.Embedding(ipc*num_classes, latent_dim)#* 每个标签映射到一个特征图
+            self.my_in_channel=3
+            self.fc=nn.Linear(latent_dim,self.my_in_channel*self.feature_map_size*self.feature_map_size)
+            self.decoder = nn.Sequential(
+                nn.ConvTranspose2d(self.my_in_channel, 32, kernel_size=3, stride=2, padding=1, output_padding=1), # 16 → 32
+                nn.ReLU(),
+                nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=1, output_padding=1), # 32-64
+                nn.ReLU(),
+                nn.ConvTranspose2d(32, 3, kernel_size=3, stride=2, padding=1, output_padding=1), # 64-128
+                nn.Tanh())
+            self.labs  = torch.tensor(
+                            np.array([np.ones(self.ipc)*i for i in range(self.num_classes)]),
+                            requires_grad=False,
+                            device=self.device
+                        ).long().view(-1)
+        elif self.MODE==2:
+            latent_dim=256
+            self.imgs  = nn.Embedding(ipc*num_classes, latent_dim)#* 每个标签映射到一个特征图
+            self.my_in_channel=3
+            self.fc=nn.Linear(latent_dim,self.my_in_channel*self.feature_map_size*self.feature_map_size)
+            self.decoder_0 = nn.Sequential(
+                nn.ConvTranspose2d(self.my_in_channel, 32, kernel_size=3, stride=2, padding=1, output_padding=1), # 16 → 32
+                nn.ReLU(),
+                nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=1, output_padding=1), # 32-64
+                nn.ReLU(),
+                nn.ConvTranspose2d(32, 3, kernel_size=3, stride=2, padding=1, output_padding=1), # 64-128
+                nn.Tanh())
+            self.decoder_1 = nn.Sequential(
+                nn.ConvTranspose2d(self.my_in_channel, 32, kernel_size=3, stride=2, padding=1, output_padding=1), # 16 → 32
+                nn.ReLU(),
+                nn.ConvTranspose2d(32, 32, kernel_size=3, stride=2, padding=1, output_padding=1), # 32-64
+                nn.ReLU(),
+                nn.ConvTranspose2d(32, 3, kernel_size=3, stride=2, padding=1, output_padding=1), # 64-128
+                nn.Tanh())
+            #* labs不在这里翻倍 最后统一处理
+            self.labs  = torch.tensor(
+                            np.array([np.ones(self.ipc)*i for i in range(self.num_classes)]),
+                            requires_grad=False,
+                            device=self.device
+                        ).long().view(-1)
 
         torch.nn.init.xavier_uniform(self.imgs.weight)
         # torch.nn.init.xavier_uniform(self.basis.weight)
         
         #显示参数量
         print(">"*100)
-        print(f"hello it's me {self.name}")
+        print(f"hello it's me {self.name}_{self.MODE}")
         print(f"Compressor Total parameters: {sum(p.numel() for p in self.parameters())}")
         # 各参数名及参数量
         for name, param in self.named_parameters():
@@ -106,9 +138,21 @@ class Net(nn.Module):
     def my_combine_basis(self, feat_maps):
         # N, C, H, W = coefficients.shape[0], basis.shape[1], basis.shape[2], basis.shape[3]
         # imgs       = torch.matmul(coefficients, basis.view(coefficients.shape[1],-1)).view(N, C, H, W)
-        imgs_input=feat_maps.reshape(feat_maps.shape[0],1,self.feature_map_size,self.feature_map_size)
-        imgs_output=self.decoder(imgs_input)
-        
+        if self.MODE==0:
+            imgs_input=feat_maps.reshape(feat_maps.shape[0],1,self.feature_map_size,self.feature_map_size)
+            imgs_output=self.decoder(imgs_input)
+        elif self.MODE==1:
+            # imgs_input=feat_maps.reshape(feat_maps.shape[0],self.channel,self.feature_map_size,self.feature_map_size)
+            # imgs_output=self.decoder(imgs_input)
+            imgs_output=self.fc(feat_maps)
+            imgs_output=imgs_output.view(imgs_output.shape[0],self.my_in_channel,self.feature_map_size,self.feature_map_size)
+            imgs_output=self.decoder(imgs_output)
+        elif self.MODE==2:
+            imgs_output=self.fc(feat_maps)
+            imgs_output=imgs_output.view(imgs_output.shape[0],self.my_in_channel,self.feature_map_size,self.feature_map_size)
+            imgs_output_0=self.decoder_0(imgs_output)
+            imgs_output_1=self.decoder_1(imgs_output)
+            imgs_output=torch.cat([imgs_output_0,imgs_output_1],dim=0)
         return imgs_output
     
     # def assign_grads(self, grads, task_indices):
@@ -155,6 +199,7 @@ class Net(nn.Module):
             else:
                 ind = torch.randperm(self.ipc)[:new_batch_size].sort()[0] + self.ipc * i
             indices.append(ind)
+
         # 实际上用到的每个类别的数据个数self.n_per_c可能小于self.ipc 所以需要随机选取？
         
         # basis = self.basis(torch.arange(self.n_basis).to(self.device))
@@ -169,6 +214,9 @@ class Net(nn.Module):
         indices = torch.cat(indices).to(self.device)
         imgs    = self.imgs(indices)
         labs    = self.labs[indices]
+        if self.MODE==2:
+            labs=torch.cat([labs,labs],dim=0)
+            #* 这里需要把labs翻倍 因为decoder_0和decoder_1的输出都要用上
 
         combine=True
         if combine:

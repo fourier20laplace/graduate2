@@ -362,16 +362,31 @@ class CompressorBPTT(nn.Module):
                         gdatas[1] += grad_tensor
                     indent = 2
                 else:
-                    grad_tensor = torch.zeros(
+                    
+                    if self.compressor.MODE==2:
+                        grad_tensor = torch.zeros(
+                                      [self.compressor.num_classes * self.compressor.ipc * 2] + list(hvp_grad[0].shape[1:]),
+                                      device=hvp_grad[0].device
+                                  )
+                        img_indices=torch.cat([img_indices,img_indices+self.compressor.num_classes * self.compressor.ipc],dim=0)
+                        grad_tensor[img_indices] = hvp_grad[0]
+                        if len(gdatas) == 0:
+                            gdatas = grad_tensor
+                        else:
+                            gdatas += grad_tensor
+                        indent = 1
+                    else:
+                        grad_tensor = torch.zeros(
                                       [self.compressor.num_classes * self.compressor.ipc] + list(hvp_grad[0].shape[1:]),
                                       device=hvp_grad[0].device
                                   )
-                    grad_tensor[img_indices] = hvp_grad[0]
-                    if len(gdatas) == 0:
-                        gdatas = grad_tensor
-                    else:
-                        gdatas += grad_tensor
-                    indent = 1
+                        grad_tensor[img_indices] = hvp_grad[0]
+                        if len(gdatas) == 0:
+                            gdatas = grad_tensor
+                        else:
+                            gdatas += grad_tensor
+                        indent = 1
+                        
                 gindices.append(img_indices)
 
                 # Update for next iteration, i.e., previous step

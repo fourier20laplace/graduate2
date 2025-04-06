@@ -197,7 +197,7 @@ def train(rank, world_size, config, args, writer,save_path):
     for it in range(config.training.n_iters):
         # evaluate at intervals
         myEval=True
-        if rank == 0 and it in eval_intervals and myEval:
+        if rank == 0 and it in eval_intervals and myEval and not args.debug and it != 0:
             # if hasattr(config, 'save') and it % config.save.save_every==0:
             #     save(compressor)
             print('Evaluating... Learning rate: ', new_lr, 'Iteration:', it)
